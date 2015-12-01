@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+<script src="jquery-2.1.4.js">
+</script>
+<link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
+<link rel="stylesheet" href="//code.jquery.com/qunit/qunit-1.20.0.css">
+<script src="//code.jquery.com/qunit/qunit-1.20.0.js"></script>
+<style>
+body{
+	font-family: 'Open Sans', sans-serif;
+}
+button{
+	background-color:#e4edf4;
+	border-radius:5px;
+	font-family: 'Open Sans', sans-serif;
+}
+.room{
+	width : 100px;
+	height : 100px;
+	background-color : green;
+	display: inline-block;
+	margin:5px;
+	margin-right:0px;
+}
+div.lift{
+	width : 100px;
+	height : 100px;
+	display: inline-block;
+}
+div.isOccupied{
+	background-color : red;
+}
+div.isEmpty{
+	background-color : green;
+}
+#displayHotel{
+	margin-left:auto;
+	margin-right:auto;
+}
+div.right {
+    margin-left: 240px;
+}
+div.midleft {
+    margin-left: 120px;
+}
+div.content{
+	margin-left:auto;
+	margin-right:auto;
+	text-align: center;
+    margin-top: 20px;
+}
+.center{
+	margin-left:auto;
+	margin-right:auto;
+}
+</style>
+</head>
+<body>
+<script>
+function floor(rooms,level){
+	this.rooms = rooms;
+	this.level = level;
+}
+function room(number, type, isEmpty,prev,next){
+	this.number = number;
+	this.type = type;
+	this.isEmpty = isEmpty;
+	this.prev = prev;
+	this.next = next;
+}
+function reservation(roomNumbers){
+	this.roomNumbers = roomNumbers;
+	
+	var display = '';
+	if(roomNumbers.length>0){
+		for (var i=0;i<roomNumbers.length;i++){
+			display += roomNumbers[i] + ' '
+		}
+	}
+	this.display = display;
+}
+function hotel(floors){
+	this.floors = floors;
+}
+function createDefaultHotel(){
+	var tempHotel = {};
+	var tempFloors = [];
+	
+	for (var i = 0;i<5;i++){
+		var floorNumber = i+1;
+		var tempRooms = [];
+		var roomType = '';
+		var roomNumber = '';
+		var prev = '';
+		var next = '';
+		
+		for(var j = 0; j<10;j++){
+			roomNumber = floorNumber * 100 + j+1;
+			next = roomNumber+1;
+			prev = roomNumber-1;
+			if(j===0){
+				prev = null;
+			} else if(j===9) {
+				next = null;
+			} 
+			if(j<5){
+				roomType = 'Deluxe';
+			}else if(j===5 || j===6){
+				roomType = 'Studio';
+			}else if(j===7 || j===8|| j===9){
+				roomType = 'Executive';
+			}
+			
+			var tempRoom =  new room (roomNumber, roomType, true,prev,next);
+			tempRooms[j] = tempRoom;
+		}
+		var tempFloor = new floor(tempRooms,floorNumber);
+		tempFloors[i] = tempFloor;
+	}
+	tempHotel = new hotel(tempFloors);
+	return tempHotel;
+}
+// var roomStatus = createDefaultHotel();
+// var roomFoundGlobal = [];
+// var reservations = [];
+// var roomStatus={
+// 		floors:[
+// 	{
+//         rooms:[
+//                {number:101,type:'studio',isEmpty:true},
+//                {number:102,type:'studio',isEmpty:true},
+//                {number:103,type:'studio',isEmpty:true},
+//                {number:104,type:'studio',isEmpty:true},
+//                {number:105,type:'studio',isEmpty:true},
+//                {number:106,type:'studio',isEmpty:true},
+//                {number:107,type:'studio',isEmpty:true},
+//                {number:108,type:'studio',isEmpty:true},
+//                {number:109,type:'studio',isEmpty:true},
+//                {number:101,type:'studio',isEmpty:true}
+            
+//                ],
+//         level:1
+	        	
+// 	},
+// 	{
+// 	    rooms:[],
+// 	    level:2
+	    	
+// 	},
+// 	{
+// 	    rooms:[],
+// 	    level:3
+	    	
+// 	},
+// 	{
+// 	    rooms:[],
+// 	    level:4
+	    	
+// 	},
+// 	{
+// 	    rooms:[],
+// 	    level:5
+	    	
+// 	}
+// 	]
+// ,};
+// 
+function getRoomStatus (){
+	var roomStatusStored = localStorage.getItem('RoomStatus');
+	if(!roomStatusStored){
+		return [];
+	}
+	return JSON.parse(roomStatusStored);
+}
+
+
+function setRoomStatus (roomStatusLocal){
+	 localStorage.setItem('RoomStatus', JSON.stringify(roomStatusLocal));
+}
+function getReservations (){
+	var reservations = localStorage.getItem('Reservations');
+	if(!reservations){
+		return [];
+	}
+	return JSON.parse(reservations);
+}
+
+
+function setReservations (reservationsLocal){
+	localStorage.setItem('Reservations', JSON.stringify(reservationsLocal));
+}
+function getRoomFoundGlobal (){
+	var roomsFound = localStorage.getItem('RoomFoundGlobal');
+	if(!roomsFound){
+		return [];
+	}
+	return JSON.parse(roomsFound);
+}
+
+
+function setRoomFoundGlobal (roomFoundLocal){
+	localStorage.setItem('RoomFoundGlobal', JSON.stringify(roomFoundLocal));
+}
+
+function getRoom (roomNumber){
+	var floorNumber = Math.floor(roomNumber/100);
+	var shortRoomNumber = roomNumber%100;
+	return getRoomStatus().floors[floorNumber-1].rooms[shortRoomNumber-1];
+}
+
+function bookRoom (rooms){
+	var roomStatusLocal = getRoomStatus();
+	if(rooms.length>0){
+		for(var i = 0;i<rooms.length;i++){
+			var roomNumber = rooms[i].number;
+			var floorNumber = Math.floor(roomNumber/100);
+			var shortRoomNumber = roomNumber%100;
+			var isEmpty = roomStatusLocal.floors[floorNumber-1].rooms[shortRoomNumber-1].isEmpty;
+			if(isEmpty === true){
+				roomStatusLocal.floors[floorNumber-1].rooms[shortRoomNumber-1].isEmpty = false;
+			}
+		}
+	}
+	setRoomStatus(roomStatusLocal);
+}
+function cancelRoom (rooms){
+	var roomStatusLocal = getRoomStatus();
+	if(rooms.length>0){
+		for(var i = 0;i<rooms.length;i++){
+			var roomNumber = rooms[i];
+			var floorNumber = Math.floor(roomNumber/100);
+			var shortRoomNumber = roomNumber%100;
+			var isEmpty = roomStatusLocal.floors[floorNumber-1].rooms[shortRoomNumber-1].isEmpty;
+			if(isEmpty === false){
+				roomStatusLocal.floors[floorNumber-1].rooms[shortRoomNumber-1].isEmpty = true;
+			}
+		}
+	}
+	setRoomStatus(roomStatusLocal);
+}
+function bookRoomByNumber (roomNumber){
+	var result = bookRoom(getRoom(roomNumber));
+	
+}
+
+function showReservationDiv(){
+	restoreNormalDisplay();
+	$('#reservationDiv').css('display','block');
+}
+function showCancelReservationDiv(){
+	var reservationsLocal = getReservations();
+	var content ="";
+	if(reservationsLocal.length>0){
+		for (var i = 0;i<reservationsLocal.length;i++){
+			content+="<div>"+ (i+1) +": " +reservationsLocal[i].display
+			+"<button onclick='cancelBooking("+i+")'>Cancel Booking</button>"
+			+"</div>";
+		}
+	} else {
+		content+="<div>No reservation at the moment. </div>"
+	}
+	$('#reservationList').html(content);
+	restoreNormalDisplay();
+	$('#reservationList').css('display','block');
+}
+
+function cancelBooking (reservationId){
+	var reservationsLocal = getReservations();
+	var reservationLocal = reservationsLocal[reservationId];
+	cancelRoom(reservationLocal.roomNumbers);
+	reservationsLocal.splice(reservationId,1);
+	
+	setReservations(reservationsLocal);
+	var content = "<div>Your booking is cancelled.</div>";
+	$('#bookResult').html(content);		
+	displayHotel();
+	$('#bookResult').css('display','block');
+}
+function checkAvailablity(){
+	var roomNumber = $('#roomNumberInput').val();
+	var floorNumber = Math.floor(roomNumber/100);
+	var room = getRoom(roomNumber);
+	var resultText = '';
+	$('#floorNumber').val(floorNumber);
+	displayHotel();
+	if(!room){
+		resultText = 'Sorry, the room number input is incorrect';
+	} else if(room.isEmpty === true){
+		resultText = 'The room '+roomNumber +' is available.';
+// 		$('#quickBookButton').css('display','block');
+	} else {
+		resultText = 'The room '+roomNumber +' is not available.';
+	}
+	$('#checkResult').text(resultText);
+	restoreNormalDisplay();
+	$('#checkResult').css('display','block');
+}
+function restoreNormalDisplay(){
+	$('#checkResult').css('display','none');
+	$('#bookResult').css('display','none');
+	$('#reservationDiv').css('display','none');
+	$('#reservationList').css('display','none');
+}
+function displayHotel (){
+	var floorNumber = $('#floorNumber').val();
+	var floor = getRoomStatus().floors[floorNumber-1];
+	var rooms = floor.rooms;
+	for(var q = 0; q<rooms.length;q++){
+		var room = rooms[q];
+		displayRoom(room);
+	}
+	restoreNormalDisplay();
+}
+
+function searchRooms(partySize){
+	var roomOptions = [];
+	var roomsFound = [];
+	partySize = Number(partySize);
+	for(var i = 0;i<5;i++){
+		var floor = getRoomStatus().floors[i];
+		var rooms = floor.rooms;
+		var roomTemp = {};
+		
+		if (partySize === 1){
+			roomTemp = searchAvailableRoomByType('Studio',rooms);
+		} 
+		if (partySize === 2 ||(partySize < 2 &&!(roomTemp&&roomTemp.type))){
+			roomTemp = roomsFound[0] = searchAvailableRoomByType('Deluxe',rooms);
+		} 
+		if (partySize === 3 || partySize === 4 || (partySize < 4 &&!(roomTemp&&roomTemp.type))){
+			roomTemp = searchAvailableRoomByType('Executive',rooms);
+		}
+		if(roomTemp&&roomTemp.type){
+			roomsFound.push(roomTemp);
+			return roomsFound;
+		}
+		if(partySize > 4){
+			roomsFound = searchAvailableRooms(rooms,partySize);
+		}
+		if(roomsFound.length>0){
+			roomOptions.push(roomsFound);
+		}
+	}
+	var bestOption = [];
+	for (var q = 0; q<roomOptions.length; q++){
+		var option = roomOptions[q];
+		
+		if(option.length<bestOption.length || bestOption.length ===0){
+			bestOption = option;
+		}
+	}
+	return bestOption;
+}
+function searchAvailableRooms(rooms,partySize){
+	var roomOptions = [];
+	var roomsFound = [];
+	var capacity = 0;
+	for(var j=0;j<rooms.length;j++){
+		capacity = 0;
+		roomsFound = [];
+		for(var i=j;i<rooms.length;i++){
+			var room = rooms[i];
+			var isEmpty = room.isEmpty;
+			if(isEmpty === true){
+				capacity +=getRoomCapacityByType(room.type);
+				roomsFound.push(room);
+			} else {
+				capacity = 0;
+				roomsFound=[];
+			}
+			if(capacity>=partySize){
+				roomOptions.push(roomsFound);
+				capacity = 0;
+				roomsFound = [];
+				i = rooms.length;
+			}
+		}
+	}
+	var bestOption = [];
+	for (var q = 0; q<roomOptions.length; q++){
+		var option = roomOptions[q];
+		
+		if(option.length<bestOption.length || bestOption.length ===0){
+			bestOption = option;
+		}
+	}
+	return bestOption 	;
+}
+
+function searchAvailableRoomByType(roomType,rooms){
+	for(var i=0;i<rooms.length;i++){
+		var typeLocal = rooms[i].type;
+		var isEmpty = rooms[i].isEmpty;
+		if((roomType === '' || typeLocal === roomType) && isEmpty ===true){
+			return rooms[i];
+		}
+	}
+	return {};
+}
+function getRoomCapacityByType (type){
+	var studioCapacity = 1;
+	var deluxeCapacity = 2;
+	var executiveCapacity = 4;
+	var result = -1;
+	switch(type){
+		case 'Studio':
+			result = studioCapacity;
+			break;
+		case 'Deluxe':
+			result = deluxeCapacity;
+			break;
+		case 'Executive':
+			result = executiveCapacity;
+			break;
+		default :
+			result = -1;
+		
+	}
+	return result;
+}
+function confirmBookings(){
+	var roomFoundLocal = getRoomFoundGlobal();
+	var reservationsLocal = getReservations();
+	var roomNumbers = [];
+	if(roomFoundLocal&&roomFoundLocal.length>0){
+		bookRoom(roomFoundLocal);
+		for (var i=0;i<roomFoundLocal.length;i++){
+			roomNumbers.push(roomFoundLocal[i].number);
+		}
+	}
+	var reservationLocal = new reservation(roomNumbers);
+	reservationsLocal.push(reservationLocal);
+	setReservations(reservationsLocal);
+	var content = "<div>Your booking is successful.</div>";
+	$('#bookResult').html(content);		
+	displayHotel();
+	$('#bookResult').css('display','block');	
+}
+function bookMultipleFloor(){
+	var availableRooms = getAllAvailableRooms();
+	var partySize = Number($('#partySize').val());
+	var roomsFound = searchAvailableRooms(availableRooms,partySize);
+	setRoomFoundGlobal(roomsFound);
+	var content ='';
+	try{
+		if(roomsFound&&roomsFound.length>0){
+			for (var i=0;i<roomsFound.length;i++){
+				var room = roomsFound[i];
+				var type = room.type;
+				content += "<div>"+ room.number +" "
+						+ type +" "	
+					//		+ prev+"<>"+next
+						+ getRoomCapacityByType(type) +"</div>";
+			}
+			content += "<button onclick='confirmBookings()'>Confirm Booking</button>";
+		} else {
+			throw "Sorry, unable to find enough rooms.";
+			
+		}
+	} catch (err){
+		content = "<div> "+err+"</div>"
+		
+	}
+	
+	$('#bookResult').html(content);		
+	restoreNormalDisplay();
+	$('#bookResult').css('display','block');
+}
+function closeBookResult(){
+	$('#bookResult').css('display','none');
+}
+function getAllAvailableRooms(){
+	var roomStatusLocal = getRoomStatus();
+	var floors = roomStatusLocal.floors;
+	var availableRooms = [];
+	for (var i = 0;i<floors.length;i++){
+		var floor = floors[i];
+		var rooms = floor.rooms;
+		for (var j = 0;j<rooms.length;j++){
+			var room = rooms[j];
+			if(room.isEmpty === true){
+				availableRooms.push(room);
+			}
+		}
+	}
+	return availableRooms;
+}
+function tryBooking(){
+	var partySize = Number($('#partySize').val());
+	setRoomFoundGlobal(searchRooms(partySize));
+// 	console.log(roomFoundGlobal);
+	var roomsFound = getRoomFoundGlobal();
+	var content ='';
+	try {
+		if(roomsFound&&roomsFound.length>0){
+			for (var i=0;i<roomsFound.length;i++){
+				var room = roomsFound[i];
+				var type = room.type;
+				content += "<div>"+ room.number +" "
+						+ type +" "	
+					//		+ prev+"<>"+next
+						+ getRoomCapacityByType(type) +"</div>";
+			}
+			content += "<button onclick='confirmBookings()'>Confirm Booking</button>";
+		} else {
+			throw "Sorry, no room available in the same level, would you like to book room with different level?";
+			
+		}
+	} catch (err){
+		content = "<div> "+err+"</div>"
+		+"<button onclick='bookMultipleFloor()'>OK</button>"
+		+"<button onclick='closeBookResult()'>Cancel</button>";
+	}
+	
+	$('#bookResult').html(content);		
+	restoreNormalDisplay();
+	$('#bookResult').css('display','block');	
+}
+function displayRoom(room){
+	var shortNumber = room.number % 100;
+	var type = room.type;
+	var isEmptyString = room.isEmpty?'Available':'Booked';
+	var prev = room.prev;
+	var next = room.next;
+	var content = "<div class='content'>"+ room.number +"<br/>"
+					+ type +"<br/>"	
+// 					+ prev+"<>"+next
+					+ isEmptyString +"<br/></div>";
+	$('#room'+shortNumber).html(content);		
+	if(room.isEmpty===true){
+		$('#room'+shortNumber).removeClass('isOccupied');
+		$('#room'+shortNumber).addClass('isEmpty');	
+	}else{
+		$('#room'+shortNumber).addClass('isOccupied');	
+		$('#room'+shortNumber).removeClass('isEmpty');
+	}
+	
+}
+function initialization(){
+	setRoomStatus(createDefaultHotel());
+	setReservations([]);
+	setRoomFoundGlobal([]);
+	displayHotel();
+}
+
+// initialization();
+$( document ).ready(function(){
+	displayHotel();
+});
+</script>
+<div style="width:600px" class = "center">
+	<button onclick="initialization()">Initialize Application</button>
+	<button onclick="showReservationDiv()">Make Reservation</button>
+	<button onclick="showCancelReservationDiv()">Cancel Reservation</button>
+	
+	
+</div>
+<div id = "reservationDiv" style="width:600px;display:none;margin-top:20px" class = "center">
+	<label>Number of people : </label><input id="partySize"><br/>
+<!-- 	<label>Roomtype : </label><input id="roomType"> -->
+	<button onclick="tryBooking()">Look For Room</button>
+</div>
+<div id="reservationList" class = "center" style = "display:none;width:600px;margin-top:20px">
+	
+</div>
+<div id="bookResult" class = "center" style = "display:none;width:600px;margin-top:20px">
+	
+</div>
+<div style="width:600px;margin-top:20px" class = "center">
+	<label>Room : </label><input id = "roomNumberInput"> 
+	<button onclick="checkAvailablity()">Check Room Availablity</button>
+
+</div>
+<div id="checkResult" class = "center" style = "display:none;width:600px">
+	
+</div>
+<div style="width:600px;margin-top:20px" class = "center" >
+	<h4> Room Occupancy status</h4>
+	<label>Floor : </label>
+	<select id = "floorNumber" onchange="displayHotel()">
+		<option>1</option>
+		<option>2</option>
+		<option>3</option>
+		<option>4</option>
+		<option>5</option>
+	</select>
+</div>
+<div id="displayHotel" style="width:500px">
+	<div>
+		<div class ="room left" id = "room1"></div>
+		<div class ="room right"  id = "room10"></div>
+	</div>
+	<div>
+		<div class ="room left" id = "room2"></div>
+		<div class ="room right" id = "room9"></div>
+	</div>
+	<div>
+		<div class ="room left" id = "room3"></div>
+		<div class ="room right" id = "room8"></div>
+	</div>
+	<div>
+		<div class ="room left" id = "room4"></div>
+		<div class ="room right" id = "room7"></div>
+	</div>
+	<div>
+		<div class ="room midleft" id = "room5"></div>
+		<div class ="room midright" id = "room6"></div>
+		
+	</div>
+	
+	
+	
+	
+	
+</div>
+</body>
+</html>
