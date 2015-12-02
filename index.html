@@ -7,7 +7,7 @@
 </script>
 <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
 <link rel="stylesheet" href="//code.jquery.com/qunit/qunit-1.20.0.css">
-<script src="//code.jquery.com/qunit/qunit-1.20.0.js"></script>
+
 <style>
 body{
 	font-family: 'Open Sans', sans-serif;
@@ -284,25 +284,32 @@ function checkAvailablity(){
 	var floorNumber = Math.floor(roomNumber/100);
 	var room = getRoom(roomNumber);
 	var resultText = '';
+	var result = false;
 	$('#floorNumber').val(floorNumber);
 	displayHotel();
 	if(!room){
 		resultText = 'Sorry, the room number input is incorrect';
+		result = false;
 	} else if(room.isEmpty === true){
 		resultText = 'The room '+roomNumber +' is available.';
+		result = true;
 // 		$('#quickBookButton').css('display','block');
 	} else {
 		resultText = 'The room '+roomNumber +' is not available.';
+		result = false;
 	}
 	$('#checkResult').text(resultText);
 	restoreNormalDisplay();
 	$('#checkResult').css('display','block');
+	return result;
 }
 function restoreNormalDisplay(){
 	$('#checkResult').css('display','none');
 	$('#bookResult').css('display','none');
 	$('#reservationDiv').css('display','none');
 	$('#reservationList').css('display','none');
+	$('#qunit').css('display','none');	
+	$('#qunit-fixture').css('display','none');	
 }
 function displayHotel (){
 	var floorNumber = $('#floorNumber').val();
@@ -353,6 +360,15 @@ function searchRooms(partySize){
 		}
 	}
 	return bestOption;
+}
+function getRoomsTotalCapacity (roomsArray){
+	var totalCapacity = 0;
+	if(roomsArray&&roomsArray.length>0){	
+		for (var i=0;i<roomsArray.length;i++){
+			totalCapacity += getRoomCapacityByType(roomsArray[i].type);
+		}
+	}
+	return totalCapacity;
 }
 function searchAvailableRooms(rooms,partySize){
 	var roomOptions = [];
@@ -546,6 +562,13 @@ function initialization(){
 	setRoomFoundGlobal([]);
 	displayHotel();
 }
+function showUnitTesting(){
+	runUnitTesting();
+	$('#qunit').css('display','block');	
+	$('#qunit-fixture').css('display','block');	
+// 	<div id="qunit" style = "display:none"></div>
+// 	<div id="qunit-fixture" style = "display:none"></div>
+}
 
 // initialization();
 $( document ).ready(function(){
@@ -554,14 +577,16 @@ $( document ).ready(function(){
 </script>
 <div style="width:600px" class = "center">
 	<button onclick="initialization()">Initialize Application</button>
+	<button onclick="showUnitTesting()">Do Unit Testing</button>
 	<button onclick="showReservationDiv()">Make Reservation</button>
 	<button onclick="showCancelReservationDiv()">Cancel Reservation</button>
 	
 	
+	
 </div>
 <div id = "reservationDiv" style="width:600px;display:none;margin-top:20px" class = "center">
-	<label>Number of people : </label><input id="partySize"><br/>
-<!-- 	<label>Roomtype : </label><input id="roomType"> -->
+	<label>Number of people : </label><input type="number" id="partySize"><br/>
+<!-- 	<label>Roomtype : </label><input type="number" id="roomType"> -->
 	<button onclick="tryBooking()">Look For Room</button>
 </div>
 <div id="reservationList" class = "center" style = "display:none;width:600px;margin-top:20px">
@@ -571,7 +596,7 @@ $( document ).ready(function(){
 	
 </div>
 <div style="width:600px;margin-top:20px" class = "center">
-	<label>Room : </label><input id = "roomNumberInput"> 
+	<label>Room : </label><input type="number" id = "roomNumberInput"> 
 	<button onclick="checkAvailablity()">Check Room Availablity</button>
 
 </div>
@@ -617,5 +642,11 @@ $( document ).ready(function(){
 	
 	
 </div>
+
+<div id="qunit" style = "display:none"></div>
+<div id="qunit-fixture" style = "display:none"></div>
+
+<script src="//code.jquery.com/qunit/qunit-1.20.0.js"></script>
+<script src="test.js"></script>
 </body>
 </html>
